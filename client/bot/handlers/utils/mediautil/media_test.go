@@ -1,12 +1,23 @@
 package mediautil
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gotd/td/tg"
+	"github.com/krau/SaveAny-Bot/config"
 )
 
 func TestIsSupported(t *testing.T) {
+	configFile := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(configFile, []byte("[telegram]\naudio_video_only = true\n"), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	if err := config.Init(t.Context(), configFile); err != nil {
+		t.Fatalf("config init: %v", err)
+	}
+
 	tests := []struct {
 		name  string
 		media tg.MessageMediaClass
@@ -62,5 +73,23 @@ func TestIsSupported(t *testing.T) {
 				t.Fatalf("IsSupported() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestIsSupportedLegacyMode(t *testing.T) {
+	configFile := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(configFile, []byte("[telegram]\naudio_video_only = false\n"), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	if err := config.Init(t.Context(), configFile); err != nil {
+		t.Fatalf("config init: %v", err)
+	}
+
+	if !IsSupported(&tg.MessageMediaPhoto{}) {
+		t.Fatal("photo should be supported when audio_video_only is false")
+	}
+
+	if !IsSupported(&tg.MessageMediaDocument{Document: &tg.Document{MimeType: "application/pdf"}}) {
+		t.Fatal("generic documents should be supported when audio_video_only is false")
 	}
 }

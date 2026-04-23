@@ -113,11 +113,12 @@ func Init(ctx context.Context, configFile ...string) error {
 		"cache.max_cost":     1e6,
 
 		// Telegram
-		"telegram.app_id":          1025907,
-		"telegram.app_hash":        "452b0359b988148995f22ff0f4229750",
-		"telegram.rpc_retry":       5,
-		"telegram.userbot.enable":  false,
-		"telegram.userbot.session": "data/usersession.db",
+		"telegram.app_id":           1025907,
+		"telegram.app_hash":         "452b0359b988148995f22ff0f4229750",
+		"telegram.rpc_retry":        5,
+		"telegram.audio_video_only": false,
+		"telegram.userbot.enable":   false,
+		"telegram.userbot.session":  "data/usersession.db",
 
 		// 临时目录
 		"temp.base_path": "cache/",

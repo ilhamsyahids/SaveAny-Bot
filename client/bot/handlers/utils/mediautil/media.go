@@ -11,12 +11,22 @@ import (
 	"github.com/gotd/td/tg"
 	"github.com/krau/SaveAny-Bot/common/utils/strutil"
 	"github.com/krau/SaveAny-Bot/common/utils/tgutil"
+	"github.com/krau/SaveAny-Bot/config"
 	"github.com/krau/SaveAny-Bot/database"
 	"github.com/krau/SaveAny-Bot/pkg/enums/fnamest"
 	"github.com/krau/SaveAny-Bot/pkg/tfile"
 )
 
 func IsSupported(media tg.MessageMediaClass) bool {
+	if !config.C().Telegram.AudioVideoOnly {
+		switch media.(type) {
+		case *tg.MessageMediaDocument, *tg.MessageMediaPhoto:
+			return true
+		default:
+			return false
+		}
+	}
+
 	document, ok := documentFromMedia(media)
 	if !ok {
 		return false
