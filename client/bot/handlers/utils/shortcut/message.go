@@ -105,6 +105,10 @@ func GetFilesFromUpdateLinkMessageWithReplyEdit(ctx *ext.Context, update *ext.Up
 			logger.Debugf("message %d has no media", msg.GetID())
 			return
 		}
+		if !mediautil.IsSupported(media) {
+			logger.Debugf("message %d media type is not savable", msg.GetID())
+			return
+		}
 		opts := mediautil.TfileOptions(ctx, user, msg)
 		file, err := tfile.FromMediaMessage(media, client, msg, opts...)
 		if err != nil {

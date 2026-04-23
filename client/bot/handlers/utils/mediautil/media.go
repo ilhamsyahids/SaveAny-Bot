@@ -17,12 +17,38 @@ import (
 )
 
 func IsSupported(media tg.MessageMediaClass) bool {
-	switch media.(type) {
-	case *tg.MessageMediaDocument, *tg.MessageMediaPhoto:
-		return true
-	default:
+	document, ok := documentFromMedia(media)
+	if !ok {
 		return false
 	}
+
+	return isSupportedDocument(document)
+}
+
+func documentFromMedia(media tg.MessageMediaClass) (*tg.Document, bool) {
+	documentMedia, ok := media.(*tg.MessageMediaDocument)
+	if !ok {
+		return nil, false
+	}
+
+	document, ok := documentMedia.Document.AsNotEmpty()
+	if !ok {
+		return nil, false
+	}
+
+	return document, true
+}
+
+func isSupportedDocument(document *tg.Document) bool {
+	for _, attribute := range document.Attributes {
+		switch attribute.(type) {
+		case *tg.DocumentAttributeAudio, *tg.DocumentAttributeVideo:
+			return true
+		}
+	}
+
+	mimeType := document.GetMimeType()
+	return strings.HasPrefix(mimeType, "audio/") || strings.HasPrefix(mimeType, "video/")
 }
 
 type FilenameTemplateData struct {

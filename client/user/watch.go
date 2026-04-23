@@ -6,7 +6,7 @@ import (
 
 	"github.com/celestix/gotgproto/dispatcher"
 	"github.com/celestix/gotgproto/ext"
-	"github.com/gotd/td/tg"
+	"github.com/krau/SaveAny-Bot/client/bot/handlers/utils/mediautil"
 	"github.com/krau/SaveAny-Bot/common/utils/tgutil"
 	"github.com/krau/SaveAny-Bot/pkg/tfile"
 )
@@ -72,15 +72,7 @@ func handleMediaMessage(ctx *ext.Context, update *ext.Update) error {
 	if !ok || media == nil {
 		return dispatcher.EndGroups
 	}
-	support := func() bool {
-		switch media.(type) {
-		case *tg.MessageMediaDocument, *tg.MessageMediaPhoto:
-			return true
-		default:
-			return false
-		}
-	}()
-	if !support {
+	if !mediautil.IsSupported(media) {
 		return dispatcher.EndGroups
 	}
 	file, err := tfile.FromMediaMessage(media, ctx.Raw, message.Message, tfile.WithNameIfEmpty(

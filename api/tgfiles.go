@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gotd/td/tg"
 	"github.com/krau/SaveAny-Bot/client/bot"
+	"github.com/krau/SaveAny-Bot/client/bot/handlers/utils/mediautil"
 	userclient "github.com/krau/SaveAny-Bot/client/user"
 	"github.com/krau/SaveAny-Bot/common/utils/tgutil"
 	"github.com/krau/SaveAny-Bot/pkg/tfile"
@@ -238,6 +239,9 @@ func ExtractFilesFromLinks(ctx context.Context, links []string) ([]tfile.TGFileM
 					if !ok {
 						continue
 					}
+					if !mediautil.IsSupported(gmedia) {
+						continue
+					}
 					// 使用获取消息时使用的同一个 client context 创建文件
 					file, err := tfile.FromMediaMessage(gmedia, clientCtx.Raw, gmsg)
 					if err != nil {
@@ -251,6 +255,9 @@ func ExtractFilesFromLinks(ctx context.Context, links []string) ([]tfile.TGFileM
 		}
 
 		// 单个文件 - 使用获取消息时使用的同一个 client context 创建文件
+		if !mediautil.IsSupported(media) {
+			continue
+		}
 		file, err := tfile.FromMediaMessage(media, clientCtx.Raw, msg)
 		if err != nil {
 			logger.Errorf("Failed to create file from media: %v", err)
