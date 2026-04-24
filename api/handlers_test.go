@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -337,6 +338,95 @@ func TestListStoragesHandler(t *testing.T) {
 				if resp.Storages == nil {
 					t.Error("expected non-nil storages array")
 				}
+			}
+		})
+	}
+}
+
+func TestGetMediaDurationHandler(t *testing.T) {
+	handlers, _ := setupTestServer(t)
+
+	tests := []struct {
+		name          string
+		method        string
+		targetURL     string
+		extractor     mediaDurationExtractor
+		wantStatus    int
+		wantDuration  float64
+		wantErrorCode string
+	}{
+		{
+			name:          "Method not allowed",
+			method:        http.MethodPost,
+			targetURL:     "/api/v1/media-duration?url=https://example.com/watch?v=1",
+			wantStatus:    http.StatusMethodNotAllowed,
+			wantErrorCode: "method_not_allowed",
+		},
+		{
+			name:          "Missing URL",
+			method:        http.MethodGet,
+			targetURL:     "/api/v1/media-duration",
+			wantStatus:    http.StatusBadRequest,
+			wantErrorCode: "invalid_request",
+		},
+		{
+			name:      "Extractor error",
+			method:    http.MethodGet,
+			targetURL: "/api/v1/media-duration?url=https://example.com/watch?v=1",
+			extractor: func(ctx context.Context, url string) (*MediaDurationResponse, error) {
+				return nil, errors.New("unsupported media url")
+			},
+			wantStatus:    http.StatusBadRequest,
+			wantErrorCode: "duration_extraction_failed",
+		},
+		{
+			name:      "Success",
+			method:    http.MethodGet,
+			targetURL: "/api/v1/media-duration?url=https://example.com/watch?v=1",
+			extractor: func(ctx context.Context, url string) (*MediaDurationResponse, error) {
+				return &MediaDurationResponse{
+					URL:             url,
+					DurationSeconds: 213.5,
+				}, nil
+			},
+			wantStatus:   http.StatusOK,
+			wantDuration: 213.5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.extractor != nil {
+				handlers.mediaDurationExtractor = tt.extractor
+			} else {
+				handlers.mediaDurationExtractor = extractMediaDuration
+			}
+
+			req := httptest.NewRequest(tt.method, tt.targetURL, nil)
+			rr := httptest.NewRecorder()
+			handlers.GetMediaDurationHandler(rr, req)
+
+			if rr.Code != tt.wantStatus {
+				t.Fatalf("expected status %d, got %d", tt.wantStatus, rr.Code)
+			}
+
+			if tt.wantErrorCode != "" {
+				var errResp ErrorResponse
+				if err := json.Unmarshal(rr.Body.Bytes(), &errResp); err != nil {
+					t.Fatalf("failed to decode error response: %v", err)
+				}
+				if errResp.Error != tt.wantErrorCode {
+					t.Fatalf("expected error code %q, got %q", tt.wantErrorCode, errResp.Error)
+				}
+				return
+			}
+
+			var resp MediaDurationResponse
+			if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+				t.Fatalf("failed to decode response: %v", err)
+			}
+			if resp.DurationSeconds != tt.wantDuration {
+				t.Fatalf("expected duration %.1f, got %.1f", tt.wantDuration, resp.DurationSeconds)
 			}
 		})
 	}

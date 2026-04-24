@@ -1,23 +1,31 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/krau/SaveAny-Bot/core"
 	"github.com/krau/SaveAny-Bot/pkg/enums/tasktype"
 	"github.com/krau/SaveAny-Bot/storage"
 )
 
+type mediaDurationExtractor func(ctx context.Context, url string) (*MediaDurationResponse, error)
+
 // Handlers 处理器结构体
 type Handlers struct {
-	factory *TaskFactory
+	factory                *TaskFactory
+	mediaDurationExtractor mediaDurationExtractor
 }
 
 // NewHandlers 创建处理器
 func NewHandlers(factory *TaskFactory) *Handlers {
-	return &Handlers{factory: factory}
+	return &Handlers{
+		factory:                factory,
+		mediaDurationExtractor: extractMediaDuration,
+	}
 }
 
 // CreateTaskHandler 创建任务处理器
@@ -143,6 +151,31 @@ func (h *Handlers) ListStoragesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, http.StatusOK, StoragesResponse{Storages: storages})
+}
+
+// GetMediaDurationHandler 获取媒体时长
+func (h *Handlers) GetMediaDurationHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		WriteError(w, http.StatusMethodNotAllowed, "method_not_allowed", "only GET method is allowed")
+		return
+	}
+
+	mediaURL := strings.TrimSpace(r.URL.Query().Get("url"))
+	if mediaURL == "" {
+		WriteError(w, http.StatusBadRequest, "invalid_request", "url query parameter is required")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	resp, err := h.mediaDurationExtractor(ctx, mediaURL)
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, "duration_extraction_failed", err.Error())
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, resp)
 }
 
 // GetTaskTypesHandler 获取支持的任务类型

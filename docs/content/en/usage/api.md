@@ -257,6 +257,28 @@ Hand a URL off to a registered JS plugin or built-in parser for processing and d
 
 Returns `400 task_creation_failed` if no parser is able to handle the URL.
 
+##### media-duration — Media Duration Lookup
+
+Inspect a yt-dlp-supported media URL and return its duration without downloading the file.
+
+Request:
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/media-duration?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dxxx" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+Response:
+
+```json
+{
+  "url": "https://www.youtube.com/watch?v=xxx",
+  "duration_seconds": 213.0
+}
+```
+
+Returns `400 invalid_request` when `url` is missing, or `400 duration_extraction_failed` when yt-dlp cannot inspect the media URL.
+
 ##### tgfiles — Telegram Message File Download
 
 Download files from Telegram messages via message links. Supported link formats:

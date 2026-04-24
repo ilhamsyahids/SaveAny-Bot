@@ -257,6 +257,28 @@ Authorization: Bearer <token>
 
 若没有任何解析器能处理该 URL，则返回 `400 task_creation_failed`。
 
+##### media-duration — 媒体时长查询
+
+对 yt-dlp 支持的媒体链接进行探测，在不下载文件的情况下返回音频或视频时长。
+
+请求：
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/media-duration?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dxxx" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+响应：
+
+```json
+{
+  "url": "https://www.youtube.com/watch?v=xxx",
+  "duration_seconds": 213.0
+}
+```
+
+当缺少 `url` 参数时返回 `400 invalid_request`；当 yt-dlp 无法探测该媒体链接时返回 `400 duration_extraction_failed`。
+
 ##### tgfiles — Telegram 消息文件下载
 
 通过 Telegram 消息链接下载文件。支持以下链接格式：

@@ -75,6 +75,12 @@ type StorageInfo struct {
 	Type string `json:"type"`
 }
 
+// MediaDurationResponse 媒体时长响应
+type MediaDurationResponse struct {
+	URL             string  `json:"url"`
+	DurationSeconds float64 `json:"duration_seconds"`
+}
+
 // WebhookPayload Webhook 回调负载
 type WebhookPayload struct {
 	TaskID      string     `json:"task_id"`
