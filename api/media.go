@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,23 +16,23 @@ import (
 
 var (
 	telegramMessageContextResolver = getMessageWithContext
-	directMediaDurationExtractor   = extractDirectMediaDuration
-	ytdlpMediaDurationExtractor    = extractYTDLPMediaDuration
+	directMediaMetadataExtractor   = extractDirectMediaMetadata
+	ytdlpMediaMetadataExtractor    = extractYTDLPMediaMetadata
 )
 
-func extractMediaDuration(ctx context.Context, url string) (*MediaDurationResponse, error) {
+func extractMediaMetadata(ctx context.Context, url string) (*MediaMetadataResponse, error) {
 	if isValidMessageLink(url) {
-		return extractTelegramMediaDuration(ctx, url)
+		return extractTelegramMediaMetadata(ctx, url)
 	}
 
-	if resp, err := directMediaDurationExtractor(ctx, url); err == nil {
+	if resp, err := directMediaMetadataExtractor(ctx, url); err == nil {
 		return resp, nil
 	}
 
-	return ytdlpMediaDurationExtractor(ctx, url)
+	return ytdlpMediaMetadataExtractor(ctx, url)
 }
 
-func extractTelegramMediaDuration(ctx context.Context, link string) (*MediaDurationResponse, error) {
+func extractTelegramMediaMetadata(ctx context.Context, link string) (*MediaMetadataResponse, error) {
 	chatID, msgID, err := ParseMessageLink(ctx, link)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse telegram link: %w", err)
@@ -41,55 +43,113 @@ func extractTelegramMediaDuration(ctx context.Context, link string) (*MediaDurat
 		return nil, fmt.Errorf("failed to resolve telegram message: %w", err)
 	}
 
-	duration, err := extractTelegramMessageDuration(msgCtx.Message)
-	if err != nil {
-		return nil, err
+	if msgCtx.Message == nil {
+		return nil, fmt.Errorf("telegram message is nil")
 	}
 
-	return &MediaDurationResponse{
+	if msgCtx.Message.Media == nil {
+		return nil, fmt.Errorf("telegram message has no media")
+	}
+
+	return &MediaMetadataResponse{
 		URL:             link,
-		DurationSeconds: duration,
+		Title:           extractTelegramTitle(msgCtx.Message),
+		Uploader:        extractTelegramUploader(msgCtx.Message),
+		DurationSeconds: extractTelegramDuration(msgCtx.Message),
 	}, nil
 }
 
-func extractTelegramMessageDuration(msg *tg.Message) (float64, error) {
-	if msg == nil {
-		return 0, fmt.Errorf("telegram message is nil")
-	}
-
-	if msg.Media == nil {
-		return 0, fmt.Errorf("telegram message has no media")
-	}
-
+func extractTelegramDuration(msg *tg.Message) float64 {
 	media := msg.Media
 
 	documentMedia, ok := media.(*tg.MessageMediaDocument)
 	if !ok || documentMedia == nil || documentMedia.Document == nil {
-		return 0, fmt.Errorf("telegram media does not contain a document")
+		// telegram media does not contain a document
+		return 0
 	}
 
 	document, ok := documentMedia.Document.AsNotEmpty()
 	if !ok {
-		return 0, fmt.Errorf("telegram document is empty")
+		// telegram document is empty
+		return 0
 	}
 
 	for _, attribute := range document.Attributes {
 		switch attr := attribute.(type) {
 		case *tg.DocumentAttributeVideo:
 			if attr.Duration > 0 {
-				return float64(attr.Duration), nil
+				return float64(attr.Duration)
 			}
 		case *tg.DocumentAttributeAudio:
 			if attr.Duration > 0 {
-				return float64(attr.Duration), nil
+				return float64(attr.Duration)
 			}
 		}
 	}
 
-	return 0, fmt.Errorf("duration is not available for telegram media")
+	return 0
 }
 
-func extractDirectMediaDuration(ctx context.Context, url string) (*MediaDurationResponse, error) {
+func extractTelegramTitle(msg *tg.Message) string {
+	if msg == nil {
+		return ""
+	}
+
+	if msg.Media != nil {
+		if documentMedia, ok := msg.Media.(*tg.MessageMediaDocument); ok && documentMedia != nil && documentMedia.Document != nil {
+			if document, ok := documentMedia.Document.AsNotEmpty(); ok {
+				for _, attribute := range document.Attributes {
+					switch attr := attribute.(type) {
+					case *tg.DocumentAttributeAudio:
+						if attr.Title != "" {
+							return attr.Title
+						}
+					case *tg.DocumentAttributeFilename:
+						if attr.FileName != "" {
+							return attr.FileName
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return strings.TrimSpace(msg.Message)
+}
+
+func extractTelegramUploader(msg *tg.Message) string {
+	if msg == nil {
+		return ""
+	}
+	if msg.PostAuthor != "" {
+		return msg.PostAuthor
+	}
+	if msg.FwdFrom.FromName != "" {
+		return msg.FwdFrom.FromName
+	}
+	if msg.FwdFrom.PostAuthor != "" {
+		return msg.FwdFrom.PostAuthor
+	}
+
+	if msg.Media != nil {
+		if documentMedia, ok := msg.Media.(*tg.MessageMediaDocument); ok && documentMedia != nil && documentMedia.Document != nil {
+			if document, ok := documentMedia.Document.AsNotEmpty(); ok {
+				for _, attribute := range document.Attributes {
+					switch attr := attribute.(type) {
+					case *tg.DocumentAttributeAudio:
+						if attr.Performer != "" {
+							return attr.Performer
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+func extractDirectMediaMetadata(ctx context.Context, url string) (*MediaMetadataResponse, error) {
 	probeResult, err := ffmpeg.ProbeWithTimeout(
 		url,
 		10*time.Second,
@@ -118,13 +178,14 @@ func extractDirectMediaDuration(ctx context.Context, url string) (*MediaDuration
 		return nil, fmt.Errorf("duration is not available for direct media")
 	}
 
-	return &MediaDurationResponse{
+	return &MediaMetadataResponse{
 		URL:             url,
+		Title:           deriveTitleFromURL(url),
 		DurationSeconds: duration,
 	}, nil
 }
 
-func extractYTDLPMediaDuration(ctx context.Context, url string) (*MediaDurationResponse, error) {
+func extractYTDLPMediaMetadata(ctx context.Context, url string) (*MediaMetadataResponse, error) {
 	result, err := ytdlp.New().DumpSingleJSON().Run(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect media: %w", err)
@@ -157,10 +218,32 @@ func extractYTDLPMediaDuration(ctx context.Context, url string) (*MediaDurationR
 		return nil, fmt.Errorf("duration is not available for url")
 	}
 
-	return &MediaDurationResponse{
+	return &MediaMetadataResponse{
 		URL:             url,
+		Title:           firstString(infoList[0].Title, infoList[0].AltTitle),
+		Thumbnail:       firstString(infoList[0].Thumbnail),
+		Uploader:        firstString(infoList[0].Uploader, infoList[0].Channel, infoList[0].Creator, infoList[0].Artist, infoList[0].AlbumArtist),
 		DurationSeconds: *infoList[0].Duration,
 	}, nil
+}
+
+func deriveTitleFromURL(rawURL string) string {
+	trimmed := strings.TrimSpace(rawURL)
+	trimmed = strings.TrimRight(trimmed, "/")
+	base := path.Base(trimmed)
+	if base == "." || base == "/" || base == "" {
+		return ""
+	}
+	return filepath.Base(base)
+}
+
+func firstString(values ...*string) string {
+	for _, value := range values {
+		if value != nil && strings.TrimSpace(*value) != "" {
+			return strings.TrimSpace(*value)
+		}
+	}
+	return ""
 }
 
 func parseYTDLPExtractedInfoLog(line string, rawJSON *json.RawMessage) (*ytdlp.ExtractedInfo, error) {

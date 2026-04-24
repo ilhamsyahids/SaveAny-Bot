@@ -12,19 +12,19 @@ import (
 	"github.com/krau/SaveAny-Bot/storage"
 )
 
-type mediaDurationExtractor func(ctx context.Context, url string) (*MediaDurationResponse, error)
+type mediaMetadataExtractor func(ctx context.Context, url string) (*MediaMetadataResponse, error)
 
 // Handlers 处理器结构体
 type Handlers struct {
 	factory                *TaskFactory
-	mediaDurationExtractor mediaDurationExtractor
+	mediaMetadataExtractor mediaMetadataExtractor
 }
 
 // NewHandlers 创建处理器
 func NewHandlers(factory *TaskFactory) *Handlers {
 	return &Handlers{
 		factory:                factory,
-		mediaDurationExtractor: extractMediaDuration,
+		mediaMetadataExtractor: extractMediaMetadata,
 	}
 }
 
@@ -153,8 +153,8 @@ func (h *Handlers) ListStoragesHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, StoragesResponse{Storages: storages})
 }
 
-// GetMediaDurationHandler 获取媒体时长
-func (h *Handlers) GetMediaDurationHandler(w http.ResponseWriter, r *http.Request) {
+// GetMediaMetadataHandler 获取媒体元数据
+func (h *Handlers) GetMediaMetadataHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		WriteError(w, http.StatusMethodNotAllowed, "method_not_allowed", "only GET method is allowed")
 		return
@@ -169,9 +169,9 @@ func (h *Handlers) GetMediaDurationHandler(w http.ResponseWriter, r *http.Reques
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
-	resp, err := h.mediaDurationExtractor(ctx, mediaURL)
+	resp, err := h.mediaMetadataExtractor(ctx, mediaURL)
 	if err != nil {
-		WriteError(w, http.StatusBadRequest, "duration_extraction_failed", err.Error())
+		WriteError(w, http.StatusBadRequest, "metadata_extraction_failed", err.Error())
 		return
 	}
 

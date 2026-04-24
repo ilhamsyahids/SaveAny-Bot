@@ -343,68 +343,77 @@ func TestListStoragesHandler(t *testing.T) {
 	}
 }
 
-func TestGetMediaDurationHandler(t *testing.T) {
+func TestGetMediaMetadataHandler(t *testing.T) {
 	handlers, _ := setupTestServer(t)
 
 	tests := []struct {
 		name          string
 		method        string
 		targetURL     string
-		extractor     mediaDurationExtractor
+		extractor     mediaMetadataExtractor
 		wantStatus    int
-		wantDuration  float64
+		wantMetadata  *MediaMetadataResponse
 		wantErrorCode string
 	}{
 		{
 			name:          "Method not allowed",
 			method:        http.MethodPost,
-			targetURL:     "/api/v1/media-duration?url=https://example.com/watch?v=1",
+			targetURL:     "/api/v1/media-metadata?url=https://example.com/watch?v=1",
 			wantStatus:    http.StatusMethodNotAllowed,
 			wantErrorCode: "method_not_allowed",
 		},
 		{
 			name:          "Missing URL",
 			method:        http.MethodGet,
-			targetURL:     "/api/v1/media-duration",
+			targetURL:     "/api/v1/media-metadata",
 			wantStatus:    http.StatusBadRequest,
 			wantErrorCode: "invalid_request",
 		},
 		{
 			name:      "Extractor error",
 			method:    http.MethodGet,
-			targetURL: "/api/v1/media-duration?url=https://example.com/watch?v=1",
-			extractor: func(ctx context.Context, url string) (*MediaDurationResponse, error) {
+			targetURL: "/api/v1/media-metadata?url=https://example.com/watch?v=1",
+			extractor: func(ctx context.Context, url string) (*MediaMetadataResponse, error) {
 				return nil, errors.New("unsupported media url")
 			},
 			wantStatus:    http.StatusBadRequest,
-			wantErrorCode: "duration_extraction_failed",
+			wantErrorCode: "metadata_extraction_failed",
 		},
 		{
 			name:      "Success",
 			method:    http.MethodGet,
-			targetURL: "/api/v1/media-duration?url=https://example.com/watch?v=1",
-			extractor: func(ctx context.Context, url string) (*MediaDurationResponse, error) {
-				return &MediaDurationResponse{
+			targetURL: "/api/v1/media-metadata?url=https://example.com/watch?v=1",
+			extractor: func(ctx context.Context, url string) (*MediaMetadataResponse, error) {
+				return &MediaMetadataResponse{
 					URL:             url,
+					Title:           "Example",
+					Thumbnail:       "https://example.com/thumb.jpg",
+					Uploader:        "Example Uploader",
 					DurationSeconds: 213.5,
 				}, nil
 			},
-			wantStatus:   http.StatusOK,
-			wantDuration: 213.5,
+			wantStatus: http.StatusOK,
+			wantMetadata: &MediaMetadataResponse{
+				URL:             "https://example.com/watch?v=1",
+				Title:           "Example",
+				Thumbnail:       "https://example.com/thumb.jpg",
+				Uploader:        "Example Uploader",
+				DurationSeconds: 213.5,
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.extractor != nil {
-				handlers.mediaDurationExtractor = tt.extractor
+				handlers.mediaMetadataExtractor = tt.extractor
 			} else {
-				handlers.mediaDurationExtractor = extractMediaDuration
+				handlers.mediaMetadataExtractor = extractMediaMetadata
 			}
 
 			req := httptest.NewRequest(tt.method, tt.targetURL, nil)
 			rr := httptest.NewRecorder()
-			handlers.GetMediaDurationHandler(rr, req)
+			handlers.GetMediaMetadataHandler(rr, req)
 
 			if rr.Code != tt.wantStatus {
 				t.Fatalf("expected status %d, got %d", tt.wantStatus, rr.Code)
@@ -421,12 +430,12 @@ func TestGetMediaDurationHandler(t *testing.T) {
 				return
 			}
 
-			var resp MediaDurationResponse
+			var resp MediaMetadataResponse
 			if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
 				t.Fatalf("failed to decode response: %v", err)
 			}
-			if resp.DurationSeconds != tt.wantDuration {
-				t.Fatalf("expected duration %.1f, got %.1f", tt.wantDuration, resp.DurationSeconds)
+			if resp != *tt.wantMetadata {
+				t.Fatalf("expected metadata %+v, got %+v", *tt.wantMetadata, resp)
 			}
 		})
 	}

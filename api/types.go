@@ -75,10 +75,13 @@ type StorageInfo struct {
 	Type string `json:"type"`
 }
 
-// MediaDurationResponse 媒体时长响应
-type MediaDurationResponse struct {
+// MediaMetadataResponse 媒体元数据响应
+type MediaMetadataResponse struct {
 	URL             string  `json:"url"`
-	DurationSeconds float64 `json:"duration_seconds"`
+	Title           string  `json:"title,omitempty"`
+	Thumbnail       string  `json:"thumbnail,omitempty"`
+	Uploader        string  `json:"uploader,omitempty"`
+	DurationSeconds float64 `json:"duration_seconds,omitempty"`
 }
 
 // WebhookPayload Webhook 回调负载

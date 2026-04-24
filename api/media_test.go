@@ -80,7 +80,6 @@ func TestExtractTelegramMessageDuration(t *testing.T) {
 		name         string
 		message      *tg.Message
 		wantDuration float64
-		wantErr      bool
 	}{
 		{
 			name: "video duration",
@@ -97,25 +96,15 @@ func TestExtractTelegramMessageDuration(t *testing.T) {
 			wantDuration: 95,
 		},
 		{
-			name:    "missing duration",
-			message: &tg.Message{Media: &tg.MessageMediaDocument{Document: &tg.Document{}}},
-			wantErr: true,
+			name:         "missing duration",
+			message:      &tg.Message{Media: &tg.MessageMediaDocument{Document: &tg.Document{}}},
+			wantDuration: 0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := extractTelegramMessageDuration(tt.message)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			got := extractTelegramDuration(tt.message)
 			if got != tt.wantDuration {
 				t.Fatalf("expected duration %.1f, got %.1f", tt.wantDuration, got)
 			}
@@ -123,14 +112,14 @@ func TestExtractTelegramMessageDuration(t *testing.T) {
 	}
 }
 
-func TestExtractMediaDurationDispatch(t *testing.T) {
+func TestExtractMediaMetadataDispatch(t *testing.T) {
 	origTelegramResolver := telegramMessageContextResolver
-	origDirectExtractor := directMediaDurationExtractor
-	origYTDLPExtractor := ytdlpMediaDurationExtractor
+	origDirectExtractor := directMediaMetadataExtractor
+	origYTDLPExtractor := ytdlpMediaMetadataExtractor
 	defer func() {
 		telegramMessageContextResolver = origTelegramResolver
-		directMediaDurationExtractor = origDirectExtractor
-		ytdlpMediaDurationExtractor = origYTDLPExtractor
+		directMediaMetadataExtractor = origDirectExtractor
+		ytdlpMediaMetadataExtractor = origYTDLPExtractor
 	}()
 
 	t.Run("telegram link uses telegram metadata", func(t *testing.T) {
@@ -141,16 +130,16 @@ func TestExtractMediaDurationDispatch(t *testing.T) {
 				&tg.DocumentAttributeVideo{Duration: 33},
 			}}}}}, nil
 		}
-		directMediaDurationExtractor = func(ctx context.Context, url string) (*MediaDurationResponse, error) {
+		directMediaMetadataExtractor = func(ctx context.Context, url string) (*MediaMetadataResponse, error) {
 			directCalled = true
 			return nil, errors.New("should not be called")
 		}
-		ytdlpMediaDurationExtractor = func(ctx context.Context, url string) (*MediaDurationResponse, error) {
+		ytdlpMediaMetadataExtractor = func(ctx context.Context, url string) (*MediaMetadataResponse, error) {
 			ytdlpCalled = true
 			return nil, errors.New("should not be called")
 		}
 
-		resp, err := extractMediaDuration(context.Background(), "https://t.me/c/123456789/123")
+		resp, err := extractMediaMetadata(context.Background(), "https://t.me/c/123456789/123")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -166,14 +155,14 @@ func TestExtractMediaDurationDispatch(t *testing.T) {
 	})
 
 	t.Run("direct probe succeeds before ytdlp", func(t *testing.T) {
-		directMediaDurationExtractor = func(ctx context.Context, url string) (*MediaDurationResponse, error) {
-			return &MediaDurationResponse{URL: url, DurationSeconds: 12.5}, nil
+		directMediaMetadataExtractor = func(ctx context.Context, url string) (*MediaMetadataResponse, error) {
+			return &MediaMetadataResponse{URL: url, DurationSeconds: 12.5}, nil
 		}
-		ytdlpMediaDurationExtractor = func(ctx context.Context, url string) (*MediaDurationResponse, error) {
+		ytdlpMediaMetadataExtractor = func(ctx context.Context, url string) (*MediaMetadataResponse, error) {
 			return nil, errors.New("should not be called")
 		}
 
-		resp, err := extractMediaDuration(context.Background(), "https://cdn.example.com/audio.mp3")
+		resp, err := extractMediaMetadata(context.Background(), "https://cdn.example.com/audio.mp3")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -183,14 +172,14 @@ func TestExtractMediaDurationDispatch(t *testing.T) {
 	})
 
 	t.Run("falls back to ytdlp after direct probe failure", func(t *testing.T) {
-		directMediaDurationExtractor = func(ctx context.Context, url string) (*MediaDurationResponse, error) {
+		directMediaMetadataExtractor = func(ctx context.Context, url string) (*MediaMetadataResponse, error) {
 			return nil, errors.New("probe failed")
 		}
-		ytdlpMediaDurationExtractor = func(ctx context.Context, url string) (*MediaDurationResponse, error) {
-			return &MediaDurationResponse{URL: url, DurationSeconds: 88}, nil
+		ytdlpMediaMetadataExtractor = func(ctx context.Context, url string) (*MediaMetadataResponse, error) {
+			return &MediaMetadataResponse{URL: url, DurationSeconds: 88}, nil
 		}
 
-		resp, err := extractMediaDuration(context.Background(), "https://example.com/watch?v=abc")
+		resp, err := extractMediaMetadata(context.Background(), "https://example.com/watch?v=abc")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

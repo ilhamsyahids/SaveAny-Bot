@@ -472,11 +472,11 @@ curl -X GET "http://localhost:8080/api/v1/task-types" \
 
 ---
 
-## 8) Get Media Duration
+## 8) Get Media Metadata
 
-- **Path**: `/api/v1/media-duration`
+- **Path**: `/api/v1/media-metadata`
 - **Method**: `GET`
-- **Description**: Inspect a supported media URL and return its audio/video duration in seconds.
+- **Description**: Inspect a supported media URL and return available metadata such as title, thumbnail, uploader, and audio/video duration.
 
 Supported inputs:
 
@@ -498,6 +498,9 @@ Supported inputs:
 ```json
 {
   "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "title": "Rick Astley - Never Gonna Give You Up (Official Video)",
+  "thumbnail": "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg", // optional, may be empty if not available
+  "uploader": "Rick Astley", // optional, may be empty if not available
   "duration_seconds": 213.0
 }
 ```
@@ -517,7 +520,7 @@ Supported inputs:
 
 ```json
 {
-  "error": "duration_extraction_failed",
+  "error": "metadata_extraction_failed",
   "message": "failed to inspect media: ..."
 }
 ```
@@ -525,7 +528,7 @@ Supported inputs:
 ### Example
 
 ```bash
-curl -X GET "http://localhost:8080/api/v1/media-duration?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ" \
+curl -X GET "http://localhost:8080/api/v1/media-metadata?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
