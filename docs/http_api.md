@@ -478,12 +478,18 @@ curl -X GET "http://localhost:8080/api/v1/task-types" \
 - **Method**: `GET`
 - **Description**: Inspect a supported media URL and return its audio/video duration in seconds.
 
+Supported inputs:
+
+- Telegram message links such as `https://t.me/username/123` and `https://t.me/c/123456789/123`
+- Direct audio/video file URLs that `ffprobe` can inspect
+- Other media page URLs supported by `yt-dlp`
+
 ### Request
 
 - Headers:
   - `Authorization: Bearer <token>` (only if API token is configured)
 - Query parameters:
-  - `url` (required): media page URL supported by yt-dlp
+  - `url` (required): Telegram message link, direct media URL, or media page URL supported by yt-dlp
 
 ### Response
 

@@ -259,7 +259,7 @@ Authorization: Bearer <token>
 
 ##### media-duration — 媒体时长查询
 
-对 yt-dlp 支持的媒体链接进行探测，在不下载文件的情况下返回音频或视频时长。
+对 Telegram 消息链接、直链音视频地址或其他 yt-dlp 支持的媒体链接进行探测，在不完整下载文件的情况下返回音频或视频时长。
 
 请求：
 
@@ -277,7 +277,7 @@ curl -X GET "http://localhost:8080/api/v1/media-duration?url=https%3A%2F%2Fwww.y
 }
 ```
 
-当缺少 `url` 参数时返回 `400 invalid_request`；当 yt-dlp 无法探测该媒体链接时返回 `400 duration_extraction_failed`。
+当缺少 `url` 参数时返回 `400 invalid_request`；当 Telegram、直链探测和 yt-dlp 都无法获取该链接时返回 `400 duration_extraction_failed`。
 
 ##### tgfiles — Telegram 消息文件下载
 

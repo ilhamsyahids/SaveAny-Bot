@@ -259,7 +259,7 @@ Returns `400 task_creation_failed` if no parser is able to handle the URL.
 
 ##### media-duration — Media Duration Lookup
 
-Inspect a yt-dlp-supported media URL and return its duration without downloading the file.
+Inspect a Telegram message link, direct media URL, or other yt-dlp-supported media URL and return its duration without downloading the full file.
 
 Request:
 
