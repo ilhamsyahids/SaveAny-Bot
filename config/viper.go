@@ -35,6 +35,7 @@ type Config struct {
 	Storages []storage.StorageConfig `toml:"-" mapstructure:"-" json:"storages"`
 	Parser   parserConfig            `toml:"parser" mapstructure:"parser" json:"parser"`
 	Hook     hookConfig              `toml:"hook" mapstructure:"hook" json:"hook"`
+	Ytdlp    ytdlpConfig             `toml:"ytdlp" mapstructure:"ytdlp" json:"ytdlp"`
 }
 
 type aria2Config struct {
