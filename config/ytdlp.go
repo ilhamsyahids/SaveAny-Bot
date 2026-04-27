@@ -1,6 +1,11 @@
 package config
 
-import ytdlp "github.com/lrstanley/go-ytdlp"
+import (
+	"os"
+	"path/filepath"
+
+	ytdlp "github.com/lrstanley/go-ytdlp"
+)
 
 type ytdlpConfig struct {
 	CookiesFile        string `toml:"cookies_file" mapstructure:"cookies_file" json:"cookies_file"`
@@ -8,9 +13,20 @@ type ytdlpConfig struct {
 	Proxy              string `toml:"proxy" mapstructure:"proxy" json:"proxy"`
 }
 
-func (c ytdlpConfig) ApplyTo(cmd *ytdlp.Command) *ytdlp.Command {
+// ApplyTo applies ytdlp config to cmd. If tempDir is provided, cookie file is
+// copied there so yt-dlp mutations don't corrupt the original.
+func (c ytdlpConfig) ApplyTo(cmd *ytdlp.Command, tempDir string) *ytdlp.Command {
 	if c.CookiesFile != "" {
-		cmd = cmd.Cookies(c.CookiesFile)
+		cookiePath := c.CookiesFile
+		if tempDir != "" {
+			tmp := filepath.Join(tempDir, "cookies.txt")
+			if data, err := os.ReadFile(c.CookiesFile); err == nil {
+				if err := os.WriteFile(tmp, data, 0600); err == nil {
+					cookiePath = tmp
+				}
+			}
+		}
+		cmd = cmd.Cookies(cookiePath)
 	} else if c.CookiesFromBrowser != "" {
 		cmd = cmd.CookiesFromBrowser(c.CookiesFromBrowser)
 	}
