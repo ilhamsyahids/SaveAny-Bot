@@ -85,16 +85,9 @@ func (t *Task) downloadFiles(ctx context.Context, tempDir string) ([]string, err
 	cmd := ytdlp.New().
 		Output(filepath.Join(tempDir, "%(title)s.%(ext)s"))
 
-	// Apply cookies from config
+	// Apply cookies and proxy from config
 	ytdlpCfg := config.C().Ytdlp
-	if ytdlpCfg.CookiesFile != "" {
-		cmd = cmd.Cookies(ytdlpCfg.CookiesFile)
-	} else if ytdlpCfg.CookiesFromBrowser != "" {
-		cmd = cmd.CookiesFromBrowser(ytdlpCfg.CookiesFromBrowser)
-	}
-	if ytdlpCfg.Proxy != "" {
-		cmd = cmd.Proxy(ytdlpCfg.Proxy)
-	}
+	cmd = ytdlpCfg.ApplyTo(cmd)
 
 	// If no custom flags are provided, use default behavior
 	if len(t.Flags) == 0 {

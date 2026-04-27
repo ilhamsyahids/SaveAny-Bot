@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gotd/td/tg"
+	"github.com/krau/SaveAny-Bot/config"
 	"github.com/krau/ffmpeg-go"
 	ytdlp "github.com/lrstanley/go-ytdlp"
 )
@@ -186,7 +187,8 @@ func extractDirectMediaMetadata(ctx context.Context, url string) (*MediaMetadata
 }
 
 func extractYTDLPMediaMetadata(ctx context.Context, url string) (*MediaMetadataResponse, error) {
-	result, err := ytdlp.New().DumpSingleJSON().Run(ctx, url)
+	cmd := config.C().Ytdlp.ApplyTo(ytdlp.New().DumpSingleJSON())
+	result, err := cmd.Run(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect media: %w", err)
 	}
