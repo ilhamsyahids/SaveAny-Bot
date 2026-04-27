@@ -92,6 +92,9 @@ func (t *Task) downloadFiles(ctx context.Context, tempDir string) ([]string, err
 	} else if ytdlpCfg.CookiesFromBrowser != "" {
 		cmd = cmd.CookiesFromBrowser(ytdlpCfg.CookiesFromBrowser)
 	}
+	if ytdlpCfg.Proxy != "" {
+		cmd = cmd.Proxy(ytdlpCfg.Proxy)
+	}
 
 	// If no custom flags are provided, use default behavior
 	if len(t.Flags) == 0 {

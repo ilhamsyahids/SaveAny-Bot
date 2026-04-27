@@ -46,6 +46,15 @@ port = 8080
 # 认证 Token (必需)
 token = ""
 
+# yt-dlp 配置 / yt-dlp configuration
+[ytdlp]
+# Cookie 文件路径 / Path to cookies file
+# cookies_file = "/path/to/cookies.txt"
+# 从浏览器读取 Cookie, 可选: chrome, firefox, safari 等 / Read cookies from browser, options: chrome, firefox, safari, etc.
+# cookies_from_browser = "chrome"
+# 代理地址 / Proxy URL
+# proxy = "http://127.0.0.1:7890"
+
 # 存储列表
 [[storages]]
 # 标识名, 需要唯一
