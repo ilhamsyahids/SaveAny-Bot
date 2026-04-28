@@ -15,15 +15,13 @@ type ytdlpConfig struct {
 
 // ApplyTo applies ytdlp config to cmd. If tempDir is provided, cookie file is
 // copied there so yt-dlp mutations don't corrupt the original.
-func (c ytdlpConfig) ApplyTo(cmd *ytdlp.Command, tempDir string) *ytdlp.Command {
+func (c ytdlpConfig) ApplyTo(cmd *ytdlp.Command) *ytdlp.Command {
 	if c.CookiesFile != "" {
 		cookiePath := c.CookiesFile
-		if tempDir != "" {
-			tmp := filepath.Join(tempDir, "cookies.txt")
-			if data, err := os.ReadFile(c.CookiesFile); err == nil {
-				if err := os.WriteFile(tmp, data, 0600); err == nil {
-					cookiePath = tmp
-				}
+		tmp := filepath.Join(os.TempDir(), "cookies.txt")
+		if data, err := os.ReadFile(c.CookiesFile); err == nil {
+			if err := os.WriteFile(tmp, data, 0600); err == nil {
+				cookiePath = tmp
 			}
 		}
 		cmd = cmd.Cookies(cookiePath)

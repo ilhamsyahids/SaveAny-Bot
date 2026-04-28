@@ -187,7 +187,7 @@ func extractDirectMediaMetadata(ctx context.Context, url string) (*MediaMetadata
 }
 
 func extractYTDLPMediaMetadata(ctx context.Context, url string) (*MediaMetadataResponse, error) {
-	cmd := config.C().Ytdlp.ApplyTo(ytdlp.New().DumpSingleJSON(), "")
+	cmd := config.C().Ytdlp.ApplyTo(ytdlp.New().DumpSingleJSON())
 	result, err := cmd.Run(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect media: %w", err)
