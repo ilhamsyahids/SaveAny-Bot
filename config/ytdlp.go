@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -16,6 +17,7 @@ type ytdlpConfig struct {
 // ApplyTo applies ytdlp config to cmd. If tempDir is provided, cookie file is
 // copied there so yt-dlp mutations don't corrupt the original.
 func (c ytdlpConfig) ApplyTo(cmd *ytdlp.Command) *ytdlp.Command {
+	fmt.Printf("Applying ytdlp config: %+v\n", c)
 	if c.CookiesFile != "" {
 		cookiePath := c.CookiesFile
 		tmp := filepath.Join(os.TempDir(), "cookies.txt")
