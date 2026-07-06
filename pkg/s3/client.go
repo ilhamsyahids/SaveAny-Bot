@@ -140,7 +140,7 @@ func (c *Client) Put(ctx context.Context, key string, r io.Reader, size int64) e
 
 func (c *Client) buildURL(key string) (string, error) {
 	if c.pathStyle {
-		return fmt.Sprintf("%s/%s/%s", c.endpoint, c.bucket, key), nil
+		return fmt.Sprintf("%s/%s/%s", c.endpoint, c.bucket, encodeKey(key)), nil
 	}
 	u, err := url.Parse(c.endpoint)
 	if err != nil {
@@ -148,7 +148,29 @@ func (c *Client) buildURL(key string) (string, error) {
 	}
 	u.Host = c.bucket + "." + u.Host
 	u.Path = "/" + key
+	u.RawPath = "/" + encodeKey(key)
 	return u.String(), nil
+}
+
+// encodeKey URI-encodes an S3 object key per AWS SigV4 rules: every byte is
+// percent-encoded except the RFC 3986 unreserved characters and '/', which
+// separates key path segments. This keeps the request URI and the canonical
+// URI used for signing identical (e.g. '+' becomes "%2B", not left as-is).
+func encodeKey(key string) string {
+	var b strings.Builder
+	for i := 0; i < len(key); i++ {
+		ch := key[i]
+		switch {
+		case ch >= 'A' && ch <= 'Z',
+			ch >= 'a' && ch <= 'z',
+			ch >= '0' && ch <= '9',
+			ch == '-', ch == '.', ch == '_', ch == '~', ch == '/':
+			b.WriteByte(ch)
+		default:
+			fmt.Fprintf(&b, "%%%02X", ch)
+		}
+	}
+	return b.String()
 }
 
 func hmacSHA256(key []byte, data string) []byte {
