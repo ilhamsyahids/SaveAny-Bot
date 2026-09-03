@@ -125,12 +125,41 @@ Configures the behavior of the `/ytdlp` command and the `ytdlp` HTTP-API task ty
 These defaults only apply when using the `/ytdlp` command without passing any custom flags. Passing custom flags on the command (or `flags` in the API) overrides them.
 {{< /hint >}}
 
+- `proxies`: HTTP/HTTPS/SOCKS proxy URLs for yt-dlp's own requests. This is separate from `[telegram.proxy]`, which only affects the Telegram connection. Leave empty to connect directly.
+
+Unlike the format defaults above, `proxies` applies **even when custom flags are passed** — it governs whether the site is reachable at all, not what gets selected once it is. Passing your own `--proxy` still wins, and then no rotation happens.
+
 ```toml
 [ytdlp]
 max_height = 1080
 format = ""        # e.g. "bv*[height<=720]+ba/b"
 recode = "mp4"     # empty disables recoding
+proxies = [
+  "socks5://127.0.0.1:1080",
+  "http://user:pass@backup.example.com:3128",
+]
 ```
+
+A single proxy can be written as a plain string, and a comma-separated string works too:
+
+```toml
+proxies = "socks5://127.0.0.1:1080"
+proxies = "socks5://127.0.0.1:1080,http://backup.example.com:3128"
+```
+
+#### Proxy failover
+
+yt-dlp accepts only one proxy and has no failover of its own, so SaveAny-Bot rotates for it. The proxies are tried **in the order you list them**, so put the preferred one first; each entry gets a full yt-dlp run, and the first one that succeeds is used. Blank and duplicate entries are dropped, so a stray comma does not cost an extra attempt.
+
+The same rotation applies to the [media metadata endpoint](../../usage/api), so a lookup cannot report a URL unavailable that a download would in fact fetch.
+
+{{< hint warning >}}
+Every listed proxy is attempted before the task fails, so a URL that is genuinely gone (a deleted or private video) costs one run per proxy before reporting the error. Keep the list to proxies you actually expect to work.
+
+Cancelling a task stops immediately rather than working through the remaining proxies.
+
+Credentials in a proxy URL are redacted wherever they would otherwise be printed — logs, task error fields and webhook payloads all show `socks5://user:xxxxx@host:1080`.
+{{< /hint >}}
 
 ### HTTP API Configuration
 

@@ -10,4 +10,10 @@ type YtdlpConfig struct {
 	// Recode is the target video container yt-dlp recodes into (e.g. mp4).
 	// Empty disables recoding.
 	Recode string `toml:"recode" mapstructure:"recode" json:"recode"`
+	// Proxies are HTTP/HTTPS/SOCKS proxy URLs for yt-dlp's own requests,
+	// independent of telegram.proxy. They are tried in order and the first one
+	// that succeeds is used, so put the preferred proxy first. Accepts a TOML
+	// array, a single string, or a comma-separated string. Empty means connect
+	// directly.
+	Proxies []string `toml:"proxies" mapstructure:"proxies" json:"proxies"`
 }

@@ -53,6 +53,10 @@ format = ""
 # 下载后转封装的视频容器格式, 留空则不转封装. 默认 mp4
 # Target video container to recode into after download; empty disables recoding. Default mp4
 recode = "mp4"
+# yt-dlp 请求代理, 独立于 [telegram.proxy] / Proxy for yt-dlp requests, separate from [telegram.proxy]
+# 多个代理按顺序尝试 / Multiple proxies are tried in order
+# 自定义参数也生效 / Also applies with custom flags
+# proxies = ["socks5://127.0.0.1:1080", "http://backup.example.com:3128"]
 
 # 解析器配置 / Parser configuration
 [parser]

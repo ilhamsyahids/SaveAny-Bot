@@ -104,18 +104,13 @@ func (t *Task) downloadFiles(ctx context.Context, tempDir string) ([]string, err
 	// yt-dlp accepts: yt-dlp [OPTIONS] URL [URL...]
 	args := append(t.Flags, t.URLs...)
 
-	// Run with context for cancellation support
-	result, err := cmd.Run(ctx, args...)
-	if err != nil {
+	// Retry the download with configured proxies when needed.
+	if _, err := RunWithProxyFailover(ctx, cmd, config.C().Ytdlp, t.Flags, args...); err != nil {
 		// Check if context was canceled
 		if errors.Is(err, context.Canceled) {
 			return nil, err
 		}
 		return nil, fmt.Errorf("yt-dlp execution failed: %w", err)
-	}
-
-	if result.ExitCode != 0 {
-		return nil, fmt.Errorf("yt-dlp exited with code %d: %s", result.ExitCode, result.Stderr)
 	}
 
 	// List downloaded files
@@ -129,12 +124,28 @@ func (t *Task) downloadFiles(ctx context.Context, tempDir string) ([]string, err
 		if file.IsDir() {
 			continue
 		}
+		// Do not upload incomplete yt-dlp artifacts.
+		if isYtdlpTempFile(file.Name()) {
+			logger.Debugf("Skipping yt-dlp temp file: %s", file.Name())
+			continue
+		}
 		fullPath := filepath.Join(tempDir, file.Name())
 		downloadedFiles = append(downloadedFiles, fullPath)
 		logger.Debugf("Downloaded file: %s", file.Name())
 	}
 
 	return downloadedFiles, nil
+}
+
+// isYtdlpTempFile reports whether name is one of yt-dlp's in-progress
+// artifacts rather than a finished download.
+func isYtdlpTempFile(name string) bool {
+	for _, suffix := range []string{".part", ".ytdl", ".temp"} {
+		if strings.HasSuffix(name, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 // transferFile transfers a single file to storage
