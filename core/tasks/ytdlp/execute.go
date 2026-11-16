@@ -76,6 +76,10 @@ func (t *Task) Execute(ctx context.Context) error {
 	return nil
 }
 
+// outputTemplate caps the title at 200 bytes so the name stays under the
+// 255-byte NAME_MAX limit, with room for suffixes such as ".f140.m4a.part".
+const outputTemplate = "%(title).200B.%(ext)s"
+
 // downloadFiles downloads files using yt-dlp and returns the list of downloaded file paths
 func (t *Task) downloadFiles(ctx context.Context, tempDir string) ([]string, error) {
 	logger := log.FromContext(ctx)
@@ -83,7 +87,7 @@ func (t *Task) downloadFiles(ctx context.Context, tempDir string) ([]string, err
 	// Configure yt-dlp command with essential settings
 	// Always set output path to ensure files go to temp directory
 	cmd := ytdlp.New().
-		Output(filepath.Join(tempDir, "%(title)s.%(ext)s"))
+		Output(filepath.Join(tempDir, outputTemplate))
 
 	// Apply config-based format/quality defaults only when the user passes no
 	// custom flags. Any user flag means they take full control of yt-dlp.
